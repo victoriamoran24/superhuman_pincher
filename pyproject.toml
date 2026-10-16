@@ -4,10 +4,14 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
+    { name = "Victoria Moran", email = "victoriamoran@berkeley.edu" },
     { name = "Kellen Galban", email = "kellengalban751@berkeley.edu" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "mediapipe>=1.1.1",
+    "opencv-python>=5.0.0.93",
+]
 
 [project.scripts]
 superhuman-pincher = "superhuman_pincher:main"

@@ -3,8 +3,6 @@ from mediapipe.tasks.python import vision
 import time
 import cv2
 import mediapipe as mp
-from mediapipe.framework.formats import landmark_pb2
-from mediapipe.python.solutions import drawing_utils, hands as mp_hands_styles
 
 model_path = './models/hand_landmarker.task'
 
@@ -13,7 +11,9 @@ HandLandmarker = mp.tasks.vision.HandLandmarker
 HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
-
+mp_hands = vision.HandLandmarksConnections
+mp_drawing = vision.drawing_utils
+mp_drawing_styles = vision.drawing_styles
 latest_result = None
 
 #Landmarks
@@ -41,13 +41,12 @@ options = HandLandmarkerOptions(
 
 def draw_landmarks(frame, hand_landmarks):
     """Draw the 21 hand points + connections onto the frame for visual debugging."""
-    proto = landmark_pb2.NormalizedLandmarkList()
-    proto.landmark.extend([
-        landmark_pb2.NormalizedLandmark(x=lm.x, y=lm.y, z=lm.z)
-        for lm in hand_landmarks
-    ])
-    drawing_utils.draw_landmarks(
-        frame, proto, mp_hands_styles.HAND_CONNECTIONS
+    mp_drawing.draw_landmarks(
+        frame,
+        hand_landmarks,
+        mp_hands.HAND_CONNECTIONS,
+        mp_drawing_styles.get_default_hand_landmarks_style(),
+        mp_drawing_styles.get_default_hand_connections_style(),
     )
 
 
@@ -56,6 +55,8 @@ def main():
 
     with HandLandmarker.create_from_options(options) as landmarker:
         start_time = time.time()
+        last_timestamp_ms = -1
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -65,7 +66,12 @@ def main():
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
+            # Ensure timestamp is strictly monotonically increasing for LIVE_STREAM
             timestamp_ms = int((time.time() - start_time) * 1000)
+            if timestamp_ms <= last_timestamp_ms:
+                timestamp_ms = last_timestamp_ms + 1
+            last_timestamp_ms = timestamp_ms
+
             landmarker.detect_async(mp_image, timestamp_ms)
 
             if latest_result and latest_result.hand_landmarks:

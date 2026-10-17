@@ -158,6 +158,20 @@ def draw_landmarks(frame, hand_landmarks):
         mp_drawing_styles.get_default_hand_connections_style(),
     )
 
+RECORDING_COOLDOWN_SECONDS = 1.0
+_last_recording_trigger_time = 0.0
+
+
+def _recording_trigger_ready() -> bool:
+    """Debounces rapid re-detection of the same gesture (e.g. OPEN_PALM flickering frame to frame)."""
+    global _last_recording_trigger_time
+    now = time.time()
+    if now - _last_recording_trigger_time < RECORDING_COOLDOWN_SECONDS:
+        return False
+    _last_recording_trigger_time = now
+    return True
+
+
 def start_recording():
     """Starts mic capture via VoiceEngine for brain-dump transcription."""
     global recording_on
@@ -184,20 +198,22 @@ def run_command(key: str) -> None:
 
     match key:
         case "OPEN_PALM":
-            keyboard.type('Brain dump: ')
-            if not recording_on:
-                start_recording()
-            else:
-                stop_recording()
+            if _recording_trigger_ready():
+                if not recording_on:
+                    keyboard.type('Brain dump: ')
+                    start_recording()
+                else:
+                    stop_recording()
         case "CLUMPED":
             pass  #dosmthn
         case "NEUTRAL":
             pass  #dosmthn
         case "FIST":
-            if not recording_on:
-                start_recording()
-            else:
-                stop_recording()
+            if _recording_trigger_ready():
+                if not recording_on:
+                    start_recording()
+                else:
+                    stop_recording()
         case "EXPLAIN_EXPAND":
             pass  #dosmthn
         case "WRIST_TWIST":

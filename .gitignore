@@ -1,0 +1,4 @@
+
+# Kokoro model files
+*.onnx
+*.bin

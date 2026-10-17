@@ -2,3 +2,6 @@
 # Kokoro model files
 *.onnx
 *.bin
+
+__pycache__/
+*.py[cod]

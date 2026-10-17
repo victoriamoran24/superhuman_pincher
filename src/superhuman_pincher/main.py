@@ -68,11 +68,24 @@ def _get_screen_size() -> tuple[int, int]:
 SCREEN_WIDTH, SCREEN_HEIGHT = _get_screen_size()
 
 
+# Fingertip coords within [MOUSE_RANGE_MARGIN, 1 - MOUSE_RANGE_MARGIN] are remapped to the
+# full 0..1 screen range, so the cursor reaches the screen edge before the finger reaches
+# the edge of the camera frame. e.g. margin 0.2 -> 0.8 maps to the right/bottom screen edge.
+MOUSE_RANGE_MARGIN = 0.2
+
+
 def update_mouse_position(index_tip) -> None:
     """Moves the system cursor to match the index fingertip's normalized (0..1) position."""
-    x = min(max(index_tip.x, 0.0), 1.0) * SCREEN_WIDTH
-    y = min(max(index_tip.y, 0.0), 1.0) * SCREEN_HEIGHT
-    mouse.position = (int(x), int(y))
+    active_min = MOUSE_RANGE_MARGIN
+    active_span = 1.0 - 2 * MOUSE_RANGE_MARGIN
+
+    norm_x = (index_tip.x - active_min) / active_span
+    norm_y = (index_tip.y - active_min) / active_span
+
+    norm_x = min(max(norm_x, 0.0), 1.0)
+    norm_y = min(max(norm_y, 0.0), 1.0)
+
+    mouse.position = (int(norm_x * SCREEN_WIDTH), int(norm_y * SCREEN_HEIGHT))
 
 
 def is_finger_extended(landmarks, tip_idx, pip_idx) -> bool:

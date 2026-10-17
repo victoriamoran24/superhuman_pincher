@@ -15,6 +15,7 @@ from voice_engine import VoiceEngine
 voice: "VoiceEngine | None" = None
 recording_on = False
 is_clicking = False
+explain_tab_open = False
 
 model_path = './models/hand_landmarker.task'
 
@@ -188,6 +189,34 @@ def stop_recording():
     recording_on = False
 
 
+EXPLAIN_COOLDOWN_SECONDS = 1.0
+_last_explain_trigger_time = 0.0
+
+
+def _explain_trigger_ready() -> bool:
+    """Debounces rapid re-detection of the EXPLAIN_EXPAND gesture."""
+    global _last_explain_trigger_time
+    now = time.time()
+    if now - _last_explain_trigger_time < EXPLAIN_COOLDOWN_SECONDS:
+        return False
+    _last_explain_trigger_time = now
+    return True
+
+
+def toggle_explain_expand():
+    """Opens the Explainer tab (Cmd+Ctrl+Shift+G) if closed, or closes it (Esc) if already open."""
+    global explain_tab_open
+    if not explain_tab_open:
+        with keyboard.pressed(Key.cmd, Key.ctrl, Key.shift):
+            keyboard.press('g')
+            keyboard.release('g')
+        explain_tab_open = True
+    else:
+        keyboard.press(Key.esc)
+        keyboard.release(Key.esc)
+        explain_tab_open = False
+
+
 def run_command(key: str) -> None:
     global is_clicking
 
@@ -215,7 +244,8 @@ def run_command(key: str) -> None:
                 else:
                     stop_recording()
         case "EXPLAIN_EXPAND":
-            pass  #dosmthn
+            if _explain_trigger_ready():
+                toggle_explain_expand()
         case "WRIST_TWIST":
             pass  #dosmthn
         case "POINTING":

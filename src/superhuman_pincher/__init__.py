@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from superhuman-pincher!")
+from .main import main

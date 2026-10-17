@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
-superhuman_pincher = "main:main"
+superhuman_pincher = "superhuman_pincher:main"
 
 [tool.uv]
 package = true

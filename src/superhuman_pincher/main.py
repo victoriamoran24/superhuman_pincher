@@ -4,9 +4,17 @@ import time
 import cv2
 import mediapipe as mp
 import math
+from pynput.mouse import Button, Controller as MouseController
+from pynput.keyboard import Key, Controller as KeyboardController
 
-# Uncomment the next line when you are ready to connect your voice_engine.py:
-# from voice_engine import VoiceEngine
+keyboard = KeyboardController()
+mouse = MouseController()
+
+from voice_engine import VoiceEngine
+
+voice: "VoiceEngine | None" = None
+recording_on = False
+is_clicking = False
 
 model_path = './models/hand_landmarker.task'
 
@@ -45,6 +53,25 @@ def get_distance(point1, point2) -> float:
 def get_pix_coords(landmark, frame_shape) -> tuple[int, int]:
     h, w, _ = frame_shape
     return int(landmark.x * w), int(landmark.y * h)
+
+
+def _get_screen_size() -> tuple[int, int]:
+    import tkinter
+    root = tkinter.Tk()
+    root.withdraw()
+    size = (root.winfo_screenwidth(), root.winfo_screenheight())
+    root.destroy()
+    return size
+
+
+SCREEN_WIDTH, SCREEN_HEIGHT = _get_screen_size()
+
+
+def update_mouse_position(index_tip) -> None:
+    """Moves the system cursor to match the index fingertip's normalized (0..1) position."""
+    x = min(max(index_tip.x, 0.0), 1.0) * SCREEN_WIDTH
+    y = min(max(index_tip.y, 0.0), 1.0) * SCREEN_HEIGHT
+    mouse.position = (int(x), int(y))
 
 
 def is_finger_extended(landmarks, tip_idx, pip_idx) -> bool:
@@ -131,11 +158,61 @@ def draw_landmarks(frame, hand_landmarks):
         mp_drawing_styles.get_default_hand_connections_style(),
     )
 
+def start_recording():
+    """Starts mic capture via VoiceEngine for brain-dump transcription."""
+    global recording_on
+    if voice is not None:
+        voice.toggle_mic(mode="brain_dump")
+    recording_on = True
+
+
+def stop_recording():
+    """Stops mic capture; VoiceEngine transcribes and pastes the result."""
+    global recording_on
+    if voice is not None:
+        voice.toggle_mic(mode="brain_dump")
+    recording_on = False
+
+
+def run_command(key: str) -> None:
+    global is_clicking
+
+    # Release the held left click the moment the hand leaves the PINCH pose.
+    if key != "PINCH" and is_clicking:
+        mouse.release(Button.left)
+        is_clicking = False
+
+    match key:
+        case "OPEN_PALM":
+            keyboard.type('Brain dump: ')
+            if not recording_on:
+                start_recording()
+            else:
+                stop_recording()
+        case "CLUMPED":
+            pass  #dosmthn
+        case "NEUTRAL":
+            pass  #dosmthn
+        case "FIST":
+            if not recording_on:
+                start_recording()
+            else:
+                stop_recording()
+        case "EXPLAIN_EXPAND":
+            pass  #dosmthn
+        case "WRIST_TWIST":
+            pass  #dosmthn
+        case "POINTING":
+            pass  #dosmthn
+        case "PINCH":
+            if not is_clicking:
+                mouse.press(Button.left)
+                is_clicking = True
 
 def main():
+    global voice
     cap = cv2.VideoCapture(0)
-    # Uncomment when connecting voice_engine.py:
-    # voice = VoiceEngine()
+    voice = VoiceEngine()
 
     with HandLandmarker.create_from_options(options) as landmarker:
         start_time = time.time()
@@ -171,6 +248,7 @@ def main():
                     # 1. Access any specific coordinate (normalized 0..1 and pixel x, y):
                     index_tip = hand_landmarks[INDEX_FINGER_TIP]
                     ix_px, iy_px = get_pix_coords(index_tip, frame.shape)
+                    update_mouse_position(index_tip)
 
                     # 2. Classify the current static pose:
                     pose = classify_gesture(hand_landmarks)
@@ -214,6 +292,8 @@ def main():
                         (0, 255, 0),
                         2,
                     )
+
+                    run_command(pose)
 
             cv2.imshow('Camera Feed', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):

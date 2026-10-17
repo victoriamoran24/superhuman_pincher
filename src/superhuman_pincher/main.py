@@ -187,18 +187,20 @@ def _recording_trigger_ready() -> bool:
 
 
 def start_recording():
-    """Starts mic capture via VoiceEngine for brain-dump transcription."""
+    """Starts recording by sending Cmd+Shift+S (toggle shortcut in the target app)."""
     global recording_on
-    if voice is not None:
-        voice.toggle_mic(mode="brain_dump")
+    with keyboard.pressed(Key.cmd, Key.shift):
+        keyboard.press('s')
+        keyboard.release('s')
     recording_on = True
 
 
 def stop_recording():
-    """Stops mic capture; VoiceEngine transcribes and pastes the result."""
+    """Stops recording by sending Cmd+Shift+S again (same toggle shortcut)."""
     global recording_on
-    if voice is not None:
-        voice.toggle_mic(mode="brain_dump")
+    with keyboard.pressed(Key.cmd, Key.shift):
+        keyboard.press('s')
+        keyboard.release('s')
     recording_on = False
 
 
